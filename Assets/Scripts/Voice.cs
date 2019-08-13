@@ -45,7 +45,7 @@ public class Voice
     {
         increment = frequency * 2 * Mathf.PI / sampleRate;
 
-        for (int i = 0; i < data.Length; i++)
+        for (int i = 0; i < data.Length; i += channels)
         {
             phase += increment;
 

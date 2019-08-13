@@ -68,10 +68,16 @@ public class Synthesizer : MonoBehaviour
             voice.WriteAudioBuffer(ref data, channels);
         }
 
-        for (int i = 0; i < data.Length; i++)
+        for (int i = 0; i < data.Length; i += channels)
         {
             data[i] *= volume;
+
+            for (int c = 0; c < channels; c++)
+            {
+                data[i + c] = data[i];
+            }
         }
+
     }
 
     #endregion
