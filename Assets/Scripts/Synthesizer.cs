@@ -4,7 +4,11 @@ using UnityEngine;
 
 public class Synthesizer : MonoBehaviour
 {
-    private System.Random random = new System.Random();
+    const int polyphony = 16;
+    Voice[] voicesPool;
+    List<Voice> activeVoices;
+    Stack<Voice> freeVoices;
+    Dictionary<int, Voice> noteDict;
 
     private float tick = 0;
 
@@ -19,7 +23,10 @@ public class Synthesizer : MonoBehaviour
     public enum WaveType
     {
         Noise,
-        Sine
+        Sine,
+        Square,
+        Triangle,
+        Saw
     }
 
     [SerializeField] private WaveType waveType;
@@ -34,6 +41,17 @@ public class Synthesizer : MonoBehaviour
 
         NoteInput.NoteOn += NoteInput_NoteOn;
         NoteInput.NoteOff += NoteInput_NoteOff;
+
+        voicesPool = new Voice[polyphony];
+        freeVoices = new Stack<Voice>();
+        for (int i = 0; i < voicesPool.Length; i++)
+        {
+            voicesPool[i] = new Voice();
+            freeVoices.Push(voicesPool[i]);
+        }
+
+        activeVoices = new List<Voice>();
+        noteDict = new Dictionary<int, Voice>();
     }
 
     private void OnDisable()
@@ -44,32 +62,15 @@ public class Synthesizer : MonoBehaviour
 
     private void OnAudioFilterRead(float[] data, int channels)
     {
-        increment = frequency * 2 * Mathf.PI / sampleRate;
-
-        // clear audio buffer
-        for (int i = 0; i < data.Length; i++)
+        foreach (var voice in activeVoices)
         {
-            data[i] = 0;
+            voice.waveType = waveType;
+            voice.WriteAudioBuffer(ref data, channels);
         }
 
         for (int i = 0; i < data.Length; i++)
         {
-            phase += increment;
-
-            switch (waveType)
-            {
-                case WaveType.Noise:
-                    {
-                        // generate white noise
-                        data[i] = (float)(random.NextDouble() * 2 - 1) * volume;
-                    }
-                    break;
-                case WaveType.Sine:
-                    data[i] = Mathf.Sin((float)phase) * volume;
-                    break;
-                default:
-                    break;
-            }
+            data[i] *= volume;
         }
     }
 
@@ -81,12 +82,27 @@ public class Synthesizer : MonoBehaviour
     private void NoteInput_NoteOn(int noteNumber, float velocity)
     {
         Debug.LogFormat("NoteOn: {0}", noteNumber);
-        frequency = NoteToFrequency(noteNumber);
+
+        if (noteDict.ContainsKey(noteNumber)) return;
+        if (freeVoices.Count <= 0) return;
+
+        Voice voice = freeVoices.Pop();
+        voice.NoteOn(noteNumber, velocity);
+        activeVoices.Add(voice);
+        noteDict.Add(noteNumber, voice);
     }
 
     private void NoteInput_NoteOff(int noteNumber)
     {
         Debug.LogFormat("NoteOff: {0}", noteNumber);
+
+        if (!noteDict.ContainsKey(noteNumber)) return;
+
+        Voice voice = noteDict[noteNumber];
+        voice.NoteOff(noteNumber);
+        activeVoices.Remove(voice);
+        freeVoices.Push(voice);
+        noteDict.Remove(noteNumber);
     }
 
     #endregion
