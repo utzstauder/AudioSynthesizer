@@ -10,15 +10,8 @@ public class Synthesizer : MonoBehaviour
     Stack<Voice> freeVoices;
     Dictionary<int, Voice> noteDict;
 
-    private float tick = 0;
-
-    float sampleRate;
-    double increment;
-    double phase;
-
     [Header("Audio Controls")]
     [SerializeField, Range(0, 1)] float volume = 0.5f;
-    [SerializeField] float frequency = 440f;
 
     public enum WaveType
     {
@@ -36,9 +29,6 @@ public class Synthesizer : MonoBehaviour
 
     private void OnEnable()
     {
-        sampleRate = (float)AudioSettings.outputSampleRate;
-        Debug.LogFormat("Output Sample Rate = {0}", sampleRate);
-
         NoteInput.NoteOn += NoteInput_NoteOn;
         NoteInput.NoteOff += NoteInput_NoteOff;
 
@@ -77,7 +67,6 @@ public class Synthesizer : MonoBehaviour
                 data[i + c] = data[i];
             }
         }
-
     }
 
     #endregion
